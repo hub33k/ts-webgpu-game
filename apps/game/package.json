@@ -1,12 +1,25 @@
 {
-  "name": "game",
-  "private": true,
+  "name": "@tswg/game",
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "bun --bun vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "biome lint .",
+    "lint:write": "biome lint --write .",
+    "lint:write-unsafe": "biome lint --write --unsafe .",
+    "check": "biome check .",
+    "check:write": "biome check --write .",
+    "check:write-unsafe": "biome check --write --unsafe .",
+    "format": "biome format .",
+    "format:write": "biome format --write .",
+    "typecheck": "tsc --noEmit",
+    "health-check": "bun run lint && bun run check && bun run format && bun run typecheck"
+  },
+  "dependencies": {
+    "@webgpu/types": "^0.1.57"
   },
   "devDependencies": {
     "typescript": "~5.7.2",

@@ -1,24 +1,31 @@
-import './style.css'
-import typescriptLogo from './typescript.svg'
-import viteLogo from '/vite.svg'
-import { setupCounter } from './counter.ts'
+import './style.css';
+import { Game } from '~/Game/Game';
 
-document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
-  <div>
-    <a href="https://vite.dev" target="_blank">
-      <img src="${viteLogo}" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://www.typescriptlang.org/" target="_blank">
-      <img src="${typescriptLogo}" class="logo vanilla" alt="TypeScript logo" />
-    </a>
-    <h1>Vite + TypeScript</h1>
-    <div class="card">
-      <button id="counter" type="button"></button>
-    </div>
-    <p class="read-the-docs">
-      Click on the Vite and TypeScript logos to learn more
-    </p>
-  </div>
-`
+let gameModule = await import('./Game/Game');
 
-setupCounter(document.querySelector<HTMLButtonElement>('#counter')!)
+const state = gameModule.createState();
+gameModule.initState(state);
+
+const game = new Game();
+await game.Init();
+
+let lastTime = 0;
+function frameLoop(time: number) {
+  const deltaTime = (time - lastTime) / 1000; // Convert to seconds
+  lastTime = time;
+
+  game.Update(deltaTime);
+  game.Render();
+
+  requestAnimationFrame(frameLoop);
+}
+
+requestAnimationFrame(frameLoop);
+
+// https://vitejs.dev/guide/api-hmr
+if (import.meta.hot) {
+  // biome-ignore lint/suspicious/noExplicitAny: off
+  import.meta.hot.accept('./Game/Game', (module: any) => {
+    gameModule = module;
+  });
+}
