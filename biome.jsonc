@@ -11,7 +11,7 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "ignore": []
+    "ignore": [".turbo"]
   },
   "formatter": {
     "enabled": true,
