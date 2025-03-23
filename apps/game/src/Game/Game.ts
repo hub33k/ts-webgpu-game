@@ -175,11 +175,11 @@ fn fragment_main(fragData: VertexOut) -> @location(0) vec4f
           },
           {
             shaderLocation: 1, // color
-            offset: 16, // 4 floats
+            offset: 4 * Float32Array.BYTES_PER_ELEMENT, // 4 floats
             format: 'float32x4',
           },
         ],
-        arrayStride: 32, // 2 * 4 floats
+        arrayStride: 2 * 4 * Float32Array.BYTES_PER_ELEMENT, // 2 * 4 floats
         stepMode: 'vertex',
       },
     ];
