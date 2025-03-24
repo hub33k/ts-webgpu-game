@@ -14,9 +14,9 @@ const world = engine.world;
 
 engine.Init();
 
-if (import.meta.hot) {
-  import.meta.hot.accept();
-}
+// if (import.meta.hot) {
+//   import.meta.hot.accept();
+// }
 
 // ================================================================
 

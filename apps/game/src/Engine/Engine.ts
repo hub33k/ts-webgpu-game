@@ -2,7 +2,12 @@ import { World } from './ECS';
 import { GameLoop } from './GameLoop';
 import type { Vec2 } from './math';
 import { Renderer } from './renderer';
-import { ResourceManager } from './resources';
+import {
+  type Resource,
+  type ResourceLoader,
+  ResourceManager,
+  type ResourceType,
+} from './resources';
 
 export class Engine {
   private renderer: Renderer;
@@ -17,8 +22,19 @@ export class Engine {
   }
 
   public async Init() {
-    // await this.renderer.init();
+    await this.renderer.init();
     this.loop.start();
+  }
+
+  public addResourceLoader<T extends Resource>(
+    resourceType: ResourceType,
+    loader: ResourceLoader<T>,
+  ) {
+    this.resourceManager.addLoader(resourceType, loader);
+  }
+
+  public async load(url: string, resourceType: ResourceType) {
+    this.resourceManager.load(url, resourceType);
   }
 
   // Getters & Setters
@@ -26,5 +42,17 @@ export class Engine {
 
   public get world(): World {
     return this._world;
+  }
+
+  public getRenderFps(): number {
+    return this.loop.getRenderFps();
+  }
+
+  public getUpdateFps(): number {
+    return this.loop.getUpdateFps();
+  }
+
+  public getGpuTime() {
+    return this.renderer.gpuTime;
   }
 }
