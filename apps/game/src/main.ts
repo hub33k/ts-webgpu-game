@@ -1,52 +1,83 @@
 import './style.css';
-import { Engine } from '~/Engine';
-import { Vec2 } from '~/Engine/math';
 
-// Get the canvas element from the DOM
-const canvas = document.getElementById('canvas') as HTMLCanvasElement;
-if (!canvas) {
-  throw Error('Canvas not found.');
+export class Renderer {
+  private canvas!: HTMLCanvasElement;
+  private context!: GPUCanvasContext;
+  private adapter!: GPUAdapter;
+  private device!: GPUDevice;
+  private prefreredCanvasFormat!: GPUTextureFormat;
+
+  private clearColor: GPUColor = { r: 0.0, g: 0.5, b: 1.0, a: 1.0 };
+
+  public async Init() {
+    if (!navigator.gpu) {
+      throw Error('WebGPU is not supported.');
+    }
+
+    const canvasElement = document.getElementById('game') as HTMLCanvasElement;
+    if (!canvasElement) {
+      throw Error('Canvas not found.');
+    }
+    this.canvas = canvasElement;
+
+    this.context = this.canvas.getContext('webgpu') as GPUCanvasContext;
+    if (!this.context) {
+      throw Error('Failed to get WebGPU context.');
+    }
+
+    this.adapter = (await navigator.gpu.requestAdapter({
+      powerPreference: 'high-performance',
+      forceFallbackAdapter: false,
+      featureLevel: 'core',
+    })) as GPUAdapter;
+    if (!this.adapter) {
+      throw Error('Failed to get WebGPU adapter.');
+    }
+
+    this.device = await this.adapter.requestDevice({
+      label: 'Default device',
+      requiredFeatures: [],
+      requiredLimits: {},
+    });
+    if (!this.device) {
+      throw Error('Failed to get WebGPU device.');
+    }
+
+    // bgra8unorm
+    this.prefreredCanvasFormat = navigator.gpu.getPreferredCanvasFormat();
+
+    this.context.configure({
+      device: this.device,
+      format: this.prefreredCanvasFormat,
+      alphaMode: 'premultiplied',
+    });
+  }
+
+  public Render() {
+    const commandEncoder = this.device.createCommandEncoder();
+    const textureView = this.context.getCurrentTexture().createView();
+    const renderPassDescriptor: GPURenderPassDescriptor = {
+      colorAttachments: [
+        {
+          view: textureView,
+          loadOp: 'clear',
+          storeOp: 'store',
+          clearValue: this.clearColor,
+        },
+      ],
+    };
+
+    const pass = commandEncoder.beginRenderPass(renderPassDescriptor);
+
+    // render here
+
+    pass.end();
+    this.device.queue.submit([commandEncoder.finish()]);
+  }
 }
-const viewportSize = new Vec2(1152, 648);
-const engine = new Engine(canvas, viewportSize);
 
-const world = engine.world;
+const renderer = new Renderer();
 
-engine.Init();
-
-// if (import.meta.hot) {
-//   import.meta.hot.accept();
-// }
-
-// ================================================================
-
-// import { Game } from '~/Game/Game';
-
-// let gameModule = await import('./Game/Game');
-
-// const state = gameModule.createState();
-// gameModule.initState(state);
-
-// const game = new Game();
-// await game.Init();
-
-// let lastTime = 0;
-// function frameLoop(time: number) {
-//   const deltaTime = (time - lastTime) / 1000; // Convert to seconds
-//   lastTime = time;
-
-//   game.Update(deltaTime);
-//   game.Render();
-
-//   requestAnimationFrame(frameLoop);
-// }
-
-// requestAnimationFrame(frameLoop);
-
-// // https://vitejs.dev/guide/api-hmr
-// if (import.meta.hot) {
-//   // biome-ignore lint/suspicious/noExplicitAny: off
-//   import.meta.hot.accept('./Game/Game', (module: any) => {
-//     gameModule = module;
-//   });
-// }
+renderer.Init().then(() => {
+  renderer.Render();
+});
