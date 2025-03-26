@@ -1,5 +1,6 @@
 struct VertexInput {
-    @builtin(vertex_index) vertexIndex: u32,
+    // @builtin(vertex_index) vertexIndex: u32,
+    @location(0) position: vec4f,
 }
 
 struct VertexOutput {
@@ -9,15 +10,9 @@ struct VertexOutput {
 
 @vertex
 fn vertex(in: VertexInput) -> VertexOutput {
-    let pos = array(
-        vec2(-0.5,  0.5),
-        vec2( 0.5,  0.5),
-        vec2( 0.0, -0.5),
-    );
-
     var output: VertexOutput;
-    const scale = 1;
-    output.position = vec4(pos[in.vertexIndex] / scale, 1.0, 1.0);
+    const scale = 0.5;
+    output.position = vec4f(in.position.xy / scale, in.position.z, in.position.w);
     output.color = vec4(1.0, 0.0, 1.0, 1.0);
     return output;
 }

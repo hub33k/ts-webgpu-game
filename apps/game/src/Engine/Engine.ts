@@ -34,6 +34,7 @@ export class Engine {
   public OnUpdate: (dt: number) => void = (_dt) => {};
 
   public OnRender: (dt: number) => void = (_dt) => {
+    this.passEncoder.setVertexBuffer(0, this.vertexBuffer);
     this.passEncoder.setPipeline(this.pipeline);
     this.passEncoder.draw(3);
   };
@@ -174,15 +175,16 @@ export class Engine {
 
     // biome-ignore format: off
     const bufferData = new Float32Array([
-      +1.0, +1.0, +0.0, +0.0,
-      +1.0, +1.0, +0.0, +0.0,
-      +1.0, +1.0, +0.0, +0.0,
+      // xyzw (position)
+      +0.0, +0.5, +1.0, 1.0, // top
+      -0.5, -0.5, +1.0, 1.0, // left
+      +0.5, -0.5, +1.0, 1.0, // right
     ]);
     this.vertexBuffer = this.device.createBuffer({
       label: 'tmp Vertex Buffer',
       size: bufferData.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-      mappedAtCreation: true,
+      // mappedAtCreation: true,
     });
     // new Float32Array(this.vertexBuffer.getMappedRange()).set(bufferData);
     // this.vertexBuffer.unmap();
@@ -195,11 +197,23 @@ export class Engine {
     });
 
     this.pipeline = this.device.createRenderPipeline({
-      label: 'Updated Pipeline',
+      label: 'TMP Pipeline',
       layout: 'auto',
       vertex: {
         module: shaderModule,
-        buffers: [],
+        buffers: [
+          {
+            arrayStride: 4 * Float32Array.BYTES_PER_ELEMENT,
+            attributes: [
+              {
+                shaderLocation: 0,
+                offset: 0,
+                format: 'float32x4',
+              },
+            ],
+            stepMode: 'vertex',
+          },
+        ],
       },
       fragment: {
         module: shaderModule,
