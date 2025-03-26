@@ -36,7 +36,7 @@ export class Engine {
   public OnRender: (dt: number) => void = (_dt) => {
     this.passEncoder.setVertexBuffer(0, this.vertexBuffer);
     this.passEncoder.setPipeline(this.pipeline);
-    this.passEncoder.draw(3);
+    this.passEncoder.draw(6);
   };
 
   public OnProcessInput: () => void = () => {
@@ -175,10 +175,14 @@ export class Engine {
 
     // biome-ignore format: off
     const bufferData = new Float32Array([
-      // xyzw (position)
-      +0.0, +0.5, +1.0, 1.0, // top
-      -0.5, -0.5, +1.0, 1.0, // left
-      +0.5, -0.5, +1.0, 1.0, // right
+      // xy (position)
+      -0.5, +0.5, // top left
+      +0.5, +0.5, // top right
+      +0.5, -0.5, // bottom right
+
+      -0.5, +0.5, // top left
+      -0.5, -0.5, // bottom left
+      +0.5, -0.5, // bottom right
     ]);
     this.vertexBuffer = this.device.createBuffer({
       label: 'tmp Vertex Buffer',
@@ -203,12 +207,12 @@ export class Engine {
         module: shaderModule,
         buffers: [
           {
-            arrayStride: 4 * Float32Array.BYTES_PER_ELEMENT,
+            arrayStride: 2 * Float32Array.BYTES_PER_ELEMENT,
             attributes: [
               {
                 shaderLocation: 0,
                 offset: 0,
-                format: 'float32x4',
+                format: 'float32x2',
               },
             ],
             stepMode: 'vertex',
