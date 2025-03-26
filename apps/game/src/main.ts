@@ -1,9 +1,7 @@
 // biome-ignore format: off
 import './style.css';
-import { Engine } from './Engine';
+import { engine } from './Engine';
 import { Game } from './Game';
-
-const engine = new Engine();
 
 engine.Init().then(async () => {
   const game = new Game(engine);

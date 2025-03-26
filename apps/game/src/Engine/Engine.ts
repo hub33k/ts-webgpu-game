@@ -2,7 +2,13 @@ import { vec2 } from 'gl-matrix';
 import { SECOND_IN_MILLISECONDS } from './constants';
 import { InputManager } from './core';
 
+let shaderSource = await import('./shaders/shader.wgsl?raw');
+
 export class Engine {
+  // Engine
+  public inputManager!: InputManager;
+  public gameBounds = vec2.create();
+
   // Game loop
   private previousTimeInMs = 0;
   private updatePreviousTimeInMs = 0;
@@ -20,14 +26,17 @@ export class Engine {
 
   private passEncoder!: GPURenderPassEncoder;
 
-  // Engine
-  public inputManager!: InputManager;
-  public gameBounds = vec2.create();
+  // TMP
+  private pipeline!: GPURenderPipeline;
+  private vertexBuffer!: GPUBuffer;
 
   // Callbacks
   public OnUpdate: (dt: number) => void = (_dt) => {};
 
-  public OnRender: (dt: number) => void = (_dt) => {};
+  public OnRender: (dt: number) => void = (_dt) => {
+    this.passEncoder.setPipeline(this.pipeline);
+    this.passEncoder.draw(3);
+  };
 
   public OnProcessInput: () => void = () => {
     if (this.inputManager.wasKeyPressed('Escape')) {
@@ -46,7 +55,7 @@ export class Engine {
 
   public async Init(updateFramesPerSeconds = 60): Promise<void> {
     if (!navigator.gpu) {
-      throw Error('WebGPU is not supported.');
+      throw Error('WebGPU is not supported. Check https://caniuse.com/webgpu for more info.');
     }
 
     this.updateStepInMs = SECOND_IN_MILLISECONDS / updateFramesPerSeconds;
@@ -73,7 +82,11 @@ export class Engine {
       throw Error('Failed to get WebGPU adapter.');
     }
 
-    this.device = await adapter.requestDevice();
+    this.device = await adapter.requestDevice({
+      label: 'Default device',
+      requiredFeatures: [],
+      requiredLimits: {},
+    });
     if (!this.device) {
       throw Error('Failed to get WebGPU device.');
     }
@@ -85,6 +98,8 @@ export class Engine {
     });
 
     this.inputManager = new InputManager();
+
+    this.setup_tmp();
   }
 
   public Start(): void {
@@ -141,6 +156,9 @@ export class Engine {
 
   // ================================================================
 
+  // Getters and setters
+  // ================================================================
+
   public GetUpdateFps(): number {
     return SECOND_IN_MILLISECONDS / this.updateFrameTimeInMs;
   }
@@ -148,4 +166,63 @@ export class Engine {
   public GetRenderFps(): number {
     return SECOND_IN_MILLISECONDS / this.renderFrameTimeInMs;
   }
+
+  // ================================================================
+
+  private async setup_tmp(): Promise<void> {
+    this.RecreatePipeline();
+
+    // biome-ignore format: off
+    const bufferData = new Float32Array([
+      +1.0, +1.0, +0.0, +0.0,
+      +1.0, +1.0, +0.0, +0.0,
+      +1.0, +1.0, +0.0, +0.0,
+    ]);
+    this.vertexBuffer = this.device.createBuffer({
+      label: 'tmp Vertex Buffer',
+      size: bufferData.byteLength,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      mappedAtCreation: true,
+    });
+    // new Float32Array(this.vertexBuffer.getMappedRange()).set(bufferData);
+    // this.vertexBuffer.unmap();
+    this.device.queue.writeBuffer(this.vertexBuffer, 0, bufferData);
+  }
+
+  public RecreatePipeline() {
+    const shaderModule = this.device.createShaderModule({
+      code: shaderSource.default,
+    });
+
+    this.pipeline = this.device.createRenderPipeline({
+      label: 'Updated Pipeline',
+      layout: 'auto',
+      vertex: {
+        module: shaderModule,
+        buffers: [],
+      },
+      fragment: {
+        module: shaderModule,
+        targets: [
+          {
+            format: navigator.gpu.getPreferredCanvasFormat(),
+          },
+        ],
+      },
+      primitive: {
+        topology: 'triangle-list',
+      },
+    });
+  }
+}
+
+export const engine = new Engine();
+
+if (import.meta.hot) {
+  // biome-ignore lint/suspicious/noExplicitAny: off
+  import.meta.hot.accept('./shaders/shader.wgsl?raw', async (shader: any) => {
+    shaderSource = shader;
+    engine.RecreatePipeline();
+    console.log(`shader updated at ${Date.now()}`);
+  });
 }
