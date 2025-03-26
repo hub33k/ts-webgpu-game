@@ -25,9 +25,24 @@ export class Engine {
   public gameBounds = vec2.create();
 
   // Callbacks
-  public OnUpdate: (dt: number) => void = () => {};
-  public OnRender: (dt: number) => void = () => {};
-  public OnProcessInput: () => void = () => {};
+  public OnUpdate: (dt: number) => void = (_dt) => {};
+
+  public OnRender: (dt: number) => void = (_dt) => {};
+
+  public OnProcessInput: () => void = () => {
+    if (this.inputManager.wasKeyPressed('Escape')) {
+      console.log('ESC');
+    }
+    if (this.inputManager.wasKeyPressed(' ')) {
+      console.log('Space');
+    }
+
+    if (this.inputManager.isKeyDown('w')) {
+      console.log('w');
+    } else if (this.inputManager.isKeyDown('s')) {
+      console.log('s');
+    }
+  };
 
   public async Init(updateFramesPerSeconds = 60): Promise<void> {
     if (!navigator.gpu) {

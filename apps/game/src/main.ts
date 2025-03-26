@@ -9,15 +9,15 @@ engine.Init().then(async () => {
   const game = new Game(engine);
   await game.Init();
 
-  engine.OnProcessInput = () => {
-    game.ProcessInput();
-  };
-  engine.OnUpdate = (dt: number) => {
-    game.Update(dt);
-  };
-  engine.OnRender = (dt: number) => {
-    game.Render(dt);
-  };
+  // engine.OnProcessInput = () => {
+  //   game.ProcessInput();
+  // };
+  // engine.OnUpdate = (dt: number) => {
+  //   game.Update(dt);
+  // };
+  // engine.OnRender = (dt: number) => {
+  //   game.Render(dt);
+  // };
 
   engine.Start();
 });
