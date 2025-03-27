@@ -29,12 +29,14 @@ export class Engine {
   // TMP
   private pipeline!: GPURenderPipeline;
   private vertexBuffer!: GPUBuffer;
+  private texCoordBuffer!: GPUBuffer;
 
   // Callbacks
   public OnUpdate: (dt: number) => void = (_dt) => {};
 
   public OnRender: (dt: number) => void = (_dt) => {
     this.passEncoder.setVertexBuffer(0, this.vertexBuffer);
+    this.passEncoder.setVertexBuffer(1, this.texCoordBuffer);
     this.passEncoder.setPipeline(this.pipeline);
     this.passEncoder.draw(6);
   };
@@ -51,6 +53,12 @@ export class Engine {
       console.log('w');
     } else if (this.inputManager.isKeyDown('s')) {
       console.log('s');
+    }
+
+    if (this.inputManager.isKeyDown('a')) {
+      console.log('a');
+    } else if (this.inputManager.isKeyDown('d')) {
+      console.log('d');
     }
   };
 
@@ -193,6 +201,24 @@ export class Engine {
     // new Float32Array(this.vertexBuffer.getMappedRange()).set(bufferData);
     // this.vertexBuffer.unmap();
     this.device.queue.writeBuffer(this.vertexBuffer, 0, bufferData);
+
+    // biome-ignore format: off
+    const texCoordBufferData = new Float32Array([
+      // u, v
+      0.0, 0.0,
+      1.0, 0.0,
+      0.0, 1.0,
+
+      0.0, 1.0,
+      1.0, 1.0,
+      1.0, 0.0,
+    ]);
+    this.texCoordBuffer = this.device.createBuffer({
+      label: 'tmp TexCoord Buffer',
+      size: texCoordBufferData.byteLength,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+    this.device.queue.writeBuffer(this.texCoordBuffer, 0, texCoordBufferData);
   }
 
   public RecreatePipeline() {
@@ -211,6 +237,17 @@ export class Engine {
             attributes: [
               {
                 shaderLocation: 0,
+                offset: 0,
+                format: 'float32x2',
+              },
+            ],
+            stepMode: 'vertex',
+          },
+          {
+            arrayStride: 2 * Float32Array.BYTES_PER_ELEMENT,
+            attributes: [
+              {
+                shaderLocation: 1,
                 offset: 0,
                 format: 'float32x2',
               },

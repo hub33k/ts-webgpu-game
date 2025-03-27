@@ -1,13 +1,21 @@
 struct VertexInput {
     @builtin(vertex_index) vertexIndex: u32,
     @location(0) position: vec2f,
+    @location(1) texCoords: vec2f,
 }
 
 struct VertexOutput {
     @builtin(position) position: vec4f,
     @location(0) color: vec4f,
     @location(1) @interpolate(flat) vertexIndex: u32,
+    @location(2) texCoords: vec2f,
 }
+
+@group(0) @binding(0)
+var textureSampler: sampler;
+
+@group(0) @binding(1)
+var texture: texture_2d<f32>;
 
 @vertex
 fn vertex(in: VertexInput) -> VertexOutput {
@@ -29,6 +37,7 @@ fn vertex(in: VertexInput) -> VertexOutput {
 
     output.color = vec4(1.0, 0.0, 1.0, 1.0);
     output.vertexIndex = in.vertexIndex;
+    output.texCoords = in.texCoords;
 
     return output;
 }
@@ -37,11 +46,13 @@ fn vertex(in: VertexInput) -> VertexOutput {
 fn fragment(in: VertexOutput) -> @location(0) vec4f {
     let vertexIndex = f32(in.vertexIndex);
 
+    var textureColor = textureSample(texture, textureSampler, in.texCoords);
+
     let r = sin(vertexIndex * 32.0);
     let g = sin(vertexIndex * 2.0 + 1.0);
     let b = sin(vertexIndex * 2.0 + 2.0);
 
     let color = vec4(r, g, b, 1.0);
 
-    return color;
+    return color * textureColor;
 }
