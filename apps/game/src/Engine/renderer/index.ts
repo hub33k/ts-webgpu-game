@@ -32,6 +32,7 @@ export class Texture {
     );
 
     const sampler = device.createSampler({
+      // antialiasing
       magFilter: 'linear',
       minFilter: 'linear',
     });
@@ -40,8 +41,16 @@ export class Texture {
   }
 
   public static async loadTextureFromURL(device: GPUDevice, url: string): Promise<Texture> {
-    const image = new Image();
-    image.src = url;
+    const promise: Promise<HTMLImageElement> = new Promise((resolve, reject) => {
+      const image = new Image();
+      image.src = url;
+      image.onload = () => resolve(image);
+      image.onerror = () => {
+        console.error(`Failed to load image ${url}`);
+        reject();
+      };
+    });
+    const image = await promise;
     return Texture.create(device, image);
   }
 }

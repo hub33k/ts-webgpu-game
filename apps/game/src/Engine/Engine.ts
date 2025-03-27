@@ -1,6 +1,7 @@
 import { vec2 } from 'gl-matrix';
 import { SECOND_IN_MILLISECONDS } from './constants';
 import { InputManager } from './core';
+import { Texture } from './renderer';
 
 let shaderSource = await import('./shaders/shader.wgsl?raw');
 
@@ -30,14 +31,17 @@ export class Engine {
   private pipeline!: GPURenderPipeline;
   private vertexBuffer!: GPUBuffer;
   private texCoordBuffer!: GPUBuffer;
+  private testTexture!: Texture;
+  private textureBindGroup!: GPUBindGroup;
 
   // Callbacks
   public OnUpdate: (dt: number) => void = (_dt) => {};
 
   public OnRender: (dt: number) => void = (_dt) => {
+    this.passEncoder.setPipeline(this.pipeline);
+    this.passEncoder.setBindGroup(0, this.textureBindGroup);
     this.passEncoder.setVertexBuffer(0, this.vertexBuffer);
     this.passEncoder.setVertexBuffer(1, this.texCoordBuffer);
-    this.passEncoder.setPipeline(this.pipeline);
     this.passEncoder.draw(6);
   };
 
@@ -108,7 +112,7 @@ export class Engine {
 
     this.inputManager = new InputManager();
 
-    this.setup_tmp();
+    await this.setup_tmp();
   }
 
   public Start(): void {
@@ -179,46 +183,54 @@ export class Engine {
   // ================================================================
 
   private async setup_tmp(): Promise<void> {
+    this.testTexture = await Texture.loadTextureFromURL(this.device, 'assets/tmp/uv_test.png');
+
+    // vertex buffer
+    {
+      // biome-ignore format: off
+      const bufferData = new Float32Array([
+        // xy (position)
+        -0.5, -0.5,
+        +0.5, -0.5,
+        -0.5, +0.5,
+
+        -0.5, +0.5,
+        +0.5, +0.5,
+        +0.5, -0.5,
+      ]);
+      this.vertexBuffer = this.device.createBuffer({
+        label: 'tmp Vertex Buffer',
+        size: bufferData.byteLength,
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+        // mappedAtCreation: true,
+      });
+      // new Float32Array(this.vertexBuffer.getMappedRange()).set(bufferData);
+      // this.vertexBuffer.unmap();
+      this.device.queue.writeBuffer(this.vertexBuffer, 0, bufferData);
+    }
+
+    // texCoord buffer
+    {
+      // biome-ignore format: off
+      const texCoordBufferData = new Float32Array([
+        // u, v
+        0.0, 1.0,
+        1.0, 1.0,
+        0.0, 0.0,
+
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+      ]);
+      this.texCoordBuffer = this.device.createBuffer({
+        label: 'tmp TexCoord Buffer',
+        size: texCoordBufferData.byteLength,
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      });
+      this.device.queue.writeBuffer(this.texCoordBuffer, 0, texCoordBufferData);
+    }
+
     this.RecreatePipeline();
-
-    // biome-ignore format: off
-    const bufferData = new Float32Array([
-      // xy (position)
-      -0.5, +0.5, // top left
-      +0.5, +0.5, // top right
-      +0.5, -0.5, // bottom right
-
-      -0.5, +0.5, // top left
-      -0.5, -0.5, // bottom left
-      +0.5, -0.5, // bottom right
-    ]);
-    this.vertexBuffer = this.device.createBuffer({
-      label: 'tmp Vertex Buffer',
-      size: bufferData.byteLength,
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-      // mappedAtCreation: true,
-    });
-    // new Float32Array(this.vertexBuffer.getMappedRange()).set(bufferData);
-    // this.vertexBuffer.unmap();
-    this.device.queue.writeBuffer(this.vertexBuffer, 0, bufferData);
-
-    // biome-ignore format: off
-    const texCoordBufferData = new Float32Array([
-      // u, v
-      0.0, 0.0,
-      1.0, 0.0,
-      0.0, 1.0,
-
-      0.0, 1.0,
-      1.0, 1.0,
-      1.0, 0.0,
-    ]);
-    this.texCoordBuffer = this.device.createBuffer({
-      label: 'tmp TexCoord Buffer',
-      size: texCoordBufferData.byteLength,
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-    });
-    this.device.queue.writeBuffer(this.texCoordBuffer, 0, texCoordBufferData);
   }
 
   public RecreatePipeline() {
@@ -226,12 +238,46 @@ export class Engine {
       code: shaderSource.default,
     });
 
+    const textureBindGroupLayout: GPUBindGroupLayout = this.device.createBindGroupLayout({
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.FRAGMENT,
+          sampler: {},
+        },
+        {
+          binding: 1,
+          visibility: GPUShaderStage.FRAGMENT,
+          texture: {},
+        },
+      ],
+    });
+
+    const pipelineLayout: GPUPipelineLayout = this.device.createPipelineLayout({
+      bindGroupLayouts: [textureBindGroupLayout],
+    });
+
+    this.textureBindGroup = this.device.createBindGroup({
+      layout: textureBindGroupLayout,
+      entries: [
+        {
+          binding: 0,
+          resource: this.testTexture.sampler,
+        },
+        {
+          binding: 1,
+          resource: this.testTexture.texture.createView(),
+        },
+      ],
+    });
+
     this.pipeline = this.device.createRenderPipeline({
       label: 'TMP Pipeline',
-      layout: 'auto',
+      layout: pipelineLayout,
       vertex: {
         module: shaderModule,
         buffers: [
+          // position
           {
             arrayStride: 2 * Float32Array.BYTES_PER_ELEMENT,
             attributes: [
@@ -243,6 +289,7 @@ export class Engine {
             ],
             stepMode: 'vertex',
           },
+          // textureCoords
           {
             arrayStride: 2 * Float32Array.BYTES_PER_ELEMENT,
             attributes: [
@@ -261,6 +308,20 @@ export class Engine {
         targets: [
           {
             format: navigator.gpu.getPreferredCanvasFormat(),
+            blend: {
+              // S - source (image), T - target (background), SA - source alpha
+              // S * 1 + (T * (1 - SA))
+              color: {
+                srcFactor: 'one',
+                dstFactor: 'one-minus-src-alpha',
+                operation: 'add',
+              },
+              alpha: {
+                srcFactor: 'one',
+                dstFactor: 'one-minus-src-alpha',
+                operation: 'add',
+              },
+            },
           },
         ],
       },

@@ -35,7 +35,7 @@ fn vertex(in: VertexInput) -> VertexOutput {
         1.0,
     );
 
-    output.color = vec4(1.0, 0.0, 1.0, 1.0);
+    output.color = vec4(1.0, 1.0, 1.0, 1.0);
     output.vertexIndex = in.vertexIndex;
     output.texCoords = in.texCoords;
 
@@ -44,15 +44,7 @@ fn vertex(in: VertexInput) -> VertexOutput {
 
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4f {
-    let vertexIndex = f32(in.vertexIndex);
-
     var textureColor = textureSample(texture, textureSampler, in.texCoords);
 
-    let r = sin(vertexIndex * 32.0);
-    let g = sin(vertexIndex * 2.0 + 1.0);
-    let b = sin(vertexIndex * 2.0 + 2.0);
-
-    let color = vec4(r, g, b, 1.0);
-
-    return color * textureColor;
+    return in.color * textureColor;
 }
