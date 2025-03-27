@@ -53,4 +53,9 @@ export class Texture {
     const image = await promise;
     return Texture.create(device, image);
   }
+
+  // biome-ignore lint/suspicious/noExplicitAny: off
+  public static async loadTextureFromModule(device: GPUDevice, module: any): Promise<Texture> {
+    return await Texture.loadTextureFromURL(device, module.default);
+  }
 }

@@ -1,43 +1,21 @@
 export class QuadGeometry {
-  public position!: Float32Array;
-  public color!: Float32Array;
-  public texCoord!: Float32Array;
+  public vertices: number[];
+  public indices: number[];
 
   constructor() {
     // biome-ignore format: off
-    this.position = new Float32Array([
-      // x, y
-      -0.5, -0.5, // top left
-      +0.5, -0.5, // top right
-      -0.5, +0.5, // bottom right
-
-      -0.5, +0.5, // top left
-      +0.5, +0.5, // bottom left
-      +0.5, -0.5, // bottom right
-    ]);
+    this.vertices = [
+      // x y       u v        r g b
+      -0.5, +0.5,  0.0, 0.0,  1.0, 1.0, 1.0, // 0 - top left
+      +0.5, +0.5,  1.0, 0.0,  1.0, 1.0, 1.0, // 1 - top right
+      +0.5, -0.5,  1.0, 1.0,  1.0, 1.0, 1.0, // 2 - bottom right
+      -0.5, -0.5,  0.0, 1.0,  1.0, 1.0, 1.0, // 3 - bottom left
+    ];
 
     // biome-ignore format: off
-    this.color = new Float32Array([
-      // r, g, b
-      1.0, 0.0, 1.0,
-      1.0, 0.0, 1.0,
-      1.0, 0.0, 1.0,
-
-      1.0, 0.0, 1.0,
-      1.0, 0.0, 1.0,
-      1.0, 0.0, 1.0,
-    ]);
-
-    // biome-ignore format: off
-    this.texCoord = new Float32Array([
-      // u, v
-      0.0, 0.0,
-      1.0, 0.0,
-      0.0, 1.0,
-
-      0.0, 1.0,
-      1.0, 1.0,
-      1.0, 0.0,
-    ]);
+    this.indices = [
+      0, 1, 2, // First triangle (top left -> top right -> bottom right)
+      2, 3, 0, // Second triangle (bottom right -> bottom left -> top left)
+    ];
   }
 }

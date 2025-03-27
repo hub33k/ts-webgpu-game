@@ -2,22 +2,24 @@ interface ICreateBufferOptions {
   label?: string;
 }
 
-export function createBuffer(
-  data: Float32Array,
-  usage: GPUBufferUsageFlags,
-  device: GPUDevice,
-  options: ICreateBufferOptions = {},
-): GPUBuffer {
-  const buffer = device.createBuffer({
-    size: data.byteLength,
-    usage: GPUBufferUsage.COPY_DST | usage,
-  });
+export class BufferUtils {
+  public static create(
+    device: GPUDevice,
+    data: Float32Array | Uint16Array,
+    usage: GPUBufferUsageFlags,
+    options: ICreateBufferOptions = {},
+  ): GPUBuffer {
+    const buffer = device.createBuffer({
+      size: data.byteLength,
+      usage: GPUBufferUsage.COPY_DST | usage,
+    });
 
-  if (options.label) {
-    buffer.label = options.label;
+    if (options.label) {
+      buffer.label = options.label;
+    }
+
+    device.queue.writeBuffer(buffer, 0, data);
+
+    return buffer;
   }
-
-  device.queue.writeBuffer(buffer, 0, data);
-
-  return buffer;
 }

@@ -1,9 +1,10 @@
 import { vec2 } from 'gl-matrix';
 import { SECOND_IN_MILLISECONDS } from './constants';
 import { InputManager } from './core';
-import { Texture } from './renderer';
+import { BufferUtils, QuadGeometry, Texture } from './renderer';
 
 let shaderSource = await import('./shaders/shader.wgsl?raw');
+let uvTestImage = await import('/assets/tmp/uv_test.png');
 
 export class Engine {
   // Engine
@@ -30,7 +31,7 @@ export class Engine {
   // TMP
   private pipeline!: GPURenderPipeline;
   private vertexBuffer!: GPUBuffer;
-  private texCoordBuffer!: GPUBuffer;
+  private indexBuffer!: GPUBuffer;
   private testTexture!: Texture;
   private textureBindGroup!: GPUBindGroup;
 
@@ -41,8 +42,8 @@ export class Engine {
     this.passEncoder.setPipeline(this.pipeline);
     this.passEncoder.setBindGroup(0, this.textureBindGroup);
     this.passEncoder.setVertexBuffer(0, this.vertexBuffer);
-    this.passEncoder.setVertexBuffer(1, this.texCoordBuffer);
-    this.passEncoder.draw(6);
+    this.passEncoder.setIndexBuffer(this.indexBuffer, 'uint16');
+    this.passEncoder.drawIndexed(6, 1, 0, 0, 0);
   };
 
   public OnProcessInput: () => void = () => {
@@ -183,51 +184,24 @@ export class Engine {
   // ================================================================
 
   private async setup_tmp(): Promise<void> {
-    this.testTexture = await Texture.loadTextureFromURL(this.device, 'assets/tmp/uv_test.png');
+    await this.LoadImages();
+
+    const geometry = new QuadGeometry();
 
     // vertex buffer
     {
-      // biome-ignore format: off
-      const bufferData = new Float32Array([
-        // xy (position)
-        -0.5, -0.5,
-        +0.5, -0.5,
-        -0.5, +0.5,
-
-        -0.5, +0.5,
-        +0.5, +0.5,
-        +0.5, -0.5,
-      ]);
-      this.vertexBuffer = this.device.createBuffer({
-        label: 'tmp Vertex Buffer',
-        size: bufferData.byteLength,
-        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-        // mappedAtCreation: true,
+      const bufferData = new Float32Array(geometry.vertices);
+      this.vertexBuffer = BufferUtils.create(this.device, bufferData, GPUBufferUsage.VERTEX, {
+        label: 'vertex buffer',
       });
-      // new Float32Array(this.vertexBuffer.getMappedRange()).set(bufferData);
-      // this.vertexBuffer.unmap();
-      this.device.queue.writeBuffer(this.vertexBuffer, 0, bufferData);
     }
 
-    // texCoord buffer
+    // index buffer
     {
-      // biome-ignore format: off
-      const texCoordBufferData = new Float32Array([
-        // u, v
-        0.0, 1.0,
-        1.0, 1.0,
-        0.0, 0.0,
-
-        0.0, 0.0,
-        1.0, 0.0,
-        1.0, 1.0,
-      ]);
-      this.texCoordBuffer = this.device.createBuffer({
-        label: 'tmp TexCoord Buffer',
-        size: texCoordBufferData.byteLength,
-        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      const bufferData = new Uint16Array(geometry.indices);
+      this.indexBuffer = BufferUtils.create(this.device, bufferData, GPUBufferUsage.INDEX, {
+        label: 'index buffer',
       });
-      this.device.queue.writeBuffer(this.texCoordBuffer, 0, texCoordBufferData);
     }
 
     this.RecreatePipeline();
@@ -277,26 +251,26 @@ export class Engine {
       vertex: {
         module: shaderModule,
         buffers: [
-          // position
           {
-            arrayStride: 2 * Float32Array.BYTES_PER_ELEMENT,
+            arrayStride: 7 * Float32Array.BYTES_PER_ELEMENT,
             attributes: [
+              // position - x, y
               {
                 shaderLocation: 0,
                 offset: 0,
                 format: 'float32x2',
               },
-            ],
-            stepMode: 'vertex',
-          },
-          // textureCoords
-          {
-            arrayStride: 2 * Float32Array.BYTES_PER_ELEMENT,
-            attributes: [
+              // texture coords - u, v
               {
                 shaderLocation: 1,
-                offset: 0,
+                offset: 2 * Float32Array.BYTES_PER_ELEMENT,
                 format: 'float32x2',
+              },
+              // color - r, g, b
+              {
+                shaderLocation: 2,
+                offset: 4 * Float32Array.BYTES_PER_ELEMENT,
+                format: 'float32x3',
               },
             ],
             stepMode: 'vertex',
@@ -330,15 +304,41 @@ export class Engine {
       },
     });
   }
+
+  public async LoadImages(reload = false) {
+    this.testTexture = await Texture.loadTextureFromModule(this.device, uvTestImage);
+
+    if (reload) {
+      // Replace only the bind group to use the new texture
+      this.textureBindGroup = this.device.createBindGroup({
+        layout: this.pipeline.getBindGroupLayout(0),
+        entries: [
+          { binding: 0, resource: this.testTexture.sampler },
+          { binding: 1, resource: this.testTexture.texture.createView() },
+        ],
+      });
+    }
+  }
 }
 
 export const engine = new Engine();
 
+// https://bjornlu.com/blog/hot-module-replacement-is-easy
 if (import.meta.hot) {
   // biome-ignore lint/suspicious/noExplicitAny: off
   import.meta.hot.accept('./shaders/shader.wgsl?raw', async (shader: any) => {
     shaderSource = shader;
     engine.RecreatePipeline();
-    console.log(`shader updated at ${Date.now()}`);
+    console.info(`shader updated at ${Date.now()}`);
   });
+
+  import.meta.hot.accept(
+    '/assets/tmp/uv_test.png',
+    // biome-ignore lint/suspicious/noExplicitAny: off
+    async (module: any) => {
+      uvTestImage = module;
+      await engine.LoadImages(true);
+      console.info(`uv_test.png updated at ${Date.now()}`);
+    },
+  );
 }

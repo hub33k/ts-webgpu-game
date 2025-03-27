@@ -1,4 +1,3 @@
-// biome-ignore format: off
 import './style.css';
 import { engine } from './Engine';
 import { Game } from './Game';

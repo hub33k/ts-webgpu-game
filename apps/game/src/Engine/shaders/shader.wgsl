@@ -2,6 +2,7 @@ struct VertexInput {
     @builtin(vertex_index) vertexIndex: u32,
     @location(0) position: vec2f,
     @location(1) texCoords: vec2f,
+    @location(2) color: vec3f,
 }
 
 struct VertexOutput {
@@ -35,7 +36,7 @@ fn vertex(in: VertexInput) -> VertexOutput {
         1.0,
     );
 
-    output.color = vec4(1.0, 1.0, 1.0, 1.0);
+    output.color = vec4(in.color, 1.0);
     output.vertexIndex = in.vertexIndex;
     output.texCoords = in.texCoords;
 
