@@ -13,7 +13,19 @@ set(ALL_SOURCES ${ALL_SOURCES_GLOB} ${ALL_HEADERS_GLOB})
 
 set(sources
   source/main.cpp
+
+  source/Platform/WebGPU/WebGPU.cpp
 )
+
+if(EMSCRIPTEN)
+  list(APPEND sources
+    # source/Platform/Emscripten/Emscripten.cpp
+  )
+else()
+  list(APPEND sources
+    # source/Platform/WebGPU/WebGPU.cpp
+  )
+endif()
 
 add_executable(${target}
   # MACOSX_BUNDLE

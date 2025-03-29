@@ -16,7 +16,7 @@
     #define HK_DEBUGBREAK() __builtin_trap()
   #elif HK_PLATFORM_IS(EMSCRIPTEN)
     // __asm__("debugger") or emscripten_debugger()
-    #define HK_DEBUGBREAK() __asm__("debugger")
+    #define HK_DEBUGBREAK() emscripten_debugger()
   #else
     #error "Platform doesn't support debugbreak yet!"
   #endif

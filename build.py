@@ -5,6 +5,8 @@ from pathlib import Path
 import subprocess
 from shlex import split
 
+from scripts.config import is_windows
+
 # TODO (hub33k): parse CMakePresets.json and CMakeUserPresets.json
 
 ROOT_DIR = Path(__file__).parent
@@ -54,8 +56,11 @@ def configure():
         command = "emcmake cmake -G Ninja --preset debug-emscripten"
 
     print(f"[command] {command}")
-    # on mac - shell=False, on windows - shell=True?
-    subprocess.run(split(command), shell=False, check=True, cwd=ROOT_DIR)
+    if is_windows():
+        is_shell = True
+    else:
+        is_shell = False
+    subprocess.run(split(command), shell=is_shell, check=True, cwd=ROOT_DIR)
 
 
 def build():

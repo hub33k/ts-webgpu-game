@@ -57,5 +57,6 @@
 // ================================================================
 
 #include <SDL3/SDL.h>
+#include <webgpu/webgpu_cpp.h>
 
 // IWYU pragma: end_exports
